@@ -990,7 +990,8 @@
         const curHour = simTime2 ? parseInt(simTime2.split(':')[0]) : new Date().getHours();
         const stationKey = window._lastStation?.replace(/역$/, '');
         const lineNameMap2 = CONGESTION_NAME_BY_LINE[stationKey];
-        const stationForBoarding = lineNameMap2?.[lineName] || stationKey;
+        const stationForBoardingBase = lineNameMap2?.[lineName] || stationKey;
+        const stationForBoarding = BOARDING_NAME_MAP[stationForBoardingBase] || stationForBoardingBase;
         const boarding = stationForBoarding && lineName ? getBoardingContext(stationForBoarding, lineName, curHour) : null;
         html += `
         <div style="background:${recBg};border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px">
@@ -1120,6 +1121,68 @@
   // 혼잡도 DB 역명이 노선별로 다른 경우: { 표시역명: { 호선명: 혼잡도DB역명 } }
   const CONGESTION_NAME_BY_LINE = {
     '총신대입구(이수)': { '4호선': '총신대입구', '7호선': '이수' },
+  };
+
+  // 승하차 DB 역명 매핑: { 일반역명: 승하차DB역명 }
+  const BOARDING_NAME_MAP = {
+    '수유': '수유(강북구청)',
+    '미아': '미아(서울사이버대학)',
+    '성신여대입구': '성신여대입구(돈암)',
+    '한성대입구': '한성대입구(삼선교)',
+    '회현': '회현(남대문시장)',
+    '숙대입구': '숙대입구(갈월)',
+    '이촌': '이촌(국립중앙박물관)',
+    '동작': '동작(현충원)',
+    '총신대입구': '총신대입구(이수)',
+    '청량리': '청량리(서울시립대입구)',
+    '동대문역사문화공원': '동대문역사문화공원(DDP)',
+    '왕십리': '왕십리(성동구청)',
+    '구의': '구의(광진구청)',
+    '강변': '강변(동서울터미널)',
+    '잠실': '잠실(송파구청)',
+    '삼성': '삼성(무역센터)',
+    '교대': '교대(법원.검찰청)',
+    '낙성대': '낙성대(강감찬)',
+    '서울대입구': '서울대입구(관악구청)',
+    '대림': '대림(구로구청)',
+    '충정로': '충정로(경기대입구)',
+    '용두': '용두(동대문구청)',
+    '경복궁': '경복궁(정부서울청사)',
+    '남부터미널': '남부터미널(예술의전당)',
+    '양재': '양재(서초구청)',
+    '신정': '신정(은행정)',
+    '오목교': '오목교(목동운동장앞)',
+    '광화문': '광화문(세종문화회관)',
+    '군자': '군자(능동)',
+    '아차산': '아차산(어린이대공원후문)',
+    '광나루': '광나루(장신대)',
+    '천호': '천호(풍납토성)',
+    '굽은다리': '굽은다리(강동구민회관앞)',
+    '올림픽공원': '올림픽공원(한국체대)',
+    '하남시청': '하남시청(덕풍·신장)',
+    '새절': '새절(신사)',
+    '증산': '증산(명지대앞)',
+    '월드컵경기장': '월드컵경기장(성산)',
+    '광흥창': '광흥창(서강)',
+    '대흥': '대흥(서강대앞)',
+    '녹사평': '녹사평(용산구청)',
+    '안암': '안암(고대병원앞)',
+    '고려대': '고려대(종암)',
+    '월곡': '월곡(동덕여대)',
+    '상월곡': '상월곡(한국과학기술연구원)',
+    '화랑대': '화랑대(서울여대입구)',
+    '봉화산': '봉화산(서울의료원)',
+    '공릉': '공릉(서울과학기술대)',
+    '용마산': '용마산(용마폭포공원)',
+    '어린이대공원': '어린이대공원(세종대)',
+    '자양': '자양(뚝섬한강공원)',
+    '숭실대입구': '숭실대입구(살피재)',
+    '온수': '온수(성공회대입구)',
+    '몽촌토성': '몽촌토성(평화의문)',
+    '남한산성입구': '남한산성입구(성남법원.검찰청)',
+    '마곡나루': '마곡나루(서울식물원)',
+    '흑석': '흑석(중앙대입구)',
+    '관악산': '관악산(서울대)',
   };
 
   async function fetchRows(queryName) {
@@ -1623,7 +1686,8 @@
 
         // 출발역 승하차 맥락
         const depStation = seg.stations[0];
-        const depBoarding = getBoardingContext(depStation, seg.line, bh);
+        const depStationForBoarding = BOARDING_NAME_MAP[depStation] || depStation;
+        const depBoarding = getBoardingContext(depStationForBoarding, seg.line, bh);
         const depBoardingHtml = depBoarding
           ? `<div style="font-size:11px;color:#6b7280;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0">👥 ${depStation}: ${depBoarding.text}</div>`
           : '';
