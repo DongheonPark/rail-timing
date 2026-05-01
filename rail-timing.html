@@ -637,8 +637,8 @@
     if (total < 100) return null; // 이용객 너무 적으면 표시 안 함
     const offRatio = Math.round(off / total * 100);
     const onRatio = 100 - offRatio;
-    if (offRatio >= 55) return { type: 'off', text: `하차 위주 (${offRatio}%) — 자리가 날 수 있어요`, on, off };
-    if (onRatio >= 55) return { type: 'on',  text: `승차 위주 (${onRatio}%) — 혼잡도 높아질 수 있어요`, on, off };
+    if (offRatio >= 55) return { type: 'off', text: `하차 위주 (하차 ${offRatio}% / 승차 ${onRatio}%) — 자리가 날 수 있어요`, on, off };
+    if (onRatio >= 55) return { type: 'on',  text: `승차 위주 (승차 ${onRatio}% / 하차 ${offRatio}%) — 혼잡도 높아질 수 있어요`, on, off };
     return { type: 'balanced', text: `승하차 균형 (승차 ${onRatio}% / 하차 ${offRatio}%)`, on, off };
   }
 
