@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>타이밍 — 지금 탈까, 다음 열차 탈까</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --bg2: white;
+      --bg3: #f8faff;
+      --text: #1a1a1a;
+      --text2: #374151;
+      --text3: #6b7280;
+      --text4: #9ca3af;
+      --border: #d1d5db;
+      --border2: #e5e7eb;
+      --border3: #f0f0f0;
+      --shadow: rgba(0,0,0,0.08);
+      --shadow2: rgba(0,0,0,0.06);
+      --hover: #eff6ff;
+      --input-bg: white;
+      --card-bg: white;
+      --sim-badge-bg: #fef3c7;
+      --sim-badge-color: #92400e;
+    }
+    body.dark {
+      --bg: #0f1117;
+      --bg2: #1e2130;
+      --bg3: #161926;
+      --text: #f0f2f5;
+      --text2: #d1d5db;
+      --text3: #9ca3af;
+      --text4: #6b7280;
+      --border: #374151;
+      --border2: #2d3348;
+      --border3: #2d3348;
+      --shadow: rgba(0,0,0,0.3);
+      --shadow2: rgba(0,0,0,0.2);
+      --hover: #1e2d4a;
+      --input-bg: #1e2130;
+      --card-bg: #1e2130;
+      --sim-badge-bg: #3d2e0a;
+      --sim-badge-color: #fbbf24;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    header {
+      background: #1a56db;
+      color: white;
+      padding: 20px 24px 16px;
+    }
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+
+    .mode-tabs {
+      background: var(--bg2);
+      display: flex;
+      border-bottom: 2px solid var(--border2);
+      box-shadow: 0 1px 4px var(--shadow2);
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text4);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .mode-tab.active { color: #1a56db; border-bottom-color: #1a56db; }
+
+    .search-bar {
+      background: var(--bg2);
+      padding: 16px;
+      display: flex;
+      gap: 8px;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+    .route-bar {
+      background: var(--bg2);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+    .route-bar .route-inputs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .route-bar .route-ac-wrap {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+    }
+    .route-bar input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .route-bar input:focus { border-color: #1a56db; }
+    .route-swap-btn {
+      background: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--text3);
+      transition: background 0.15s;
+    }
+    .route-swap-btn:hover { background: var(--border2); }
+    .route-search-btn {
+      background: #1a56db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .route-search-btn:hover { background: #1648c0; }
+
+    /* 경로 결과 */
+    .route-result { padding: 12px 16px; }
+    .route-segment {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px var(--shadow2);
+    }
+    .route-segment-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .route-arrow {
+      text-align: center;
+      color: var(--text4);
+      font-size: 18px;
+      margin: 4px 0;
+    }
+    .search-bar input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .search-bar input:focus { border-color: #1a56db; }
+    .autocomplete-wrap { flex: 1; position: relative; min-width: 0; }
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px var(--shadow);
+      z-index: 100;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .autocomplete-item {
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .autocomplete-item:hover, .autocomplete-item.active { background: var(--hover); color: #1a56db; }
+    .search-bar button {
+      background: #1a56db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .search-bar button:hover { background: #1648c0; }
+
+
+    .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+    .line-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .line-tab {
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.15s;
+    }
+    .line-tab.active { opacity: 1; }
+    .line-tab.unsupported { opacity: 0.5; }
+    .refresh-btn {
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text3);
+      background: var(--bg2);
+      cursor: pointer;
+      margin-left: auto;
+      transition: all 0.15s;
+    }
+    .refresh-btn:hover { border-color: #1a56db; color: #1a56db; }
+
+    .direction-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .direction-col {
+      min-width: 0;
+    }
+    .direction-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text3);
+      padding: 6px 0 8px;
+      border-bottom: 2px solid var(--border2);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .train-card {
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .train-card .train-header {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .train-card .train-dest {
+      font-size: 13px;
+      flex: unset;
+      width: 100%;
+    }
+    .train-card .train-arrival {
+      font-size: 18px;
+    }
+
+    .station-label {
+      font-size: 13px;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+    .station-label strong { color: var(--text); font-size: 16px; }
+
+    /* AI 추천 박스 */
+    .recommend-box {
+      background: linear-gradient(135deg, #1a56db, #3b82f6);
+      color: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .recommend-box .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+    .recommend-box .message {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .recommend-box .sub {
+      font-size: 13px;
+      opacity: 0.85;
+      margin-top: 6px;
+    }
+
+    /* 열차 카드 */
+    .train-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px var(--shadow2);
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .train-card:hover { box-shadow: 0 4px 12px var(--shadow); }
+    .train-card.selected {
+      border: 2px solid #1a56db;
+    }
+
+    .train-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .line-badge {
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+    .line-1  { background: #0052a4; }
+    .line-2  { background: #00a84d; }
+    .line-3  { background: #f36b1c; }
+    .line-4  { background: #00a5de; }
+    .line-5  { background: #8b50a4; }
+    .line-6  { background: #c55c1d; }
+    .line-7  { background: #54640d; }
+    .line-8  { background: #e31d5a; }
+    .line-9  { background: #bfa44a; }
+    .line-경의중앙 { background: #77c4a3; }
+    .line-공항 { background: #4494d0; }
+    .line-sin { background: #d31145; }
+    .line-GTX { background: #6d28d9; }
+    .line-수인분당 { background: #f5a200; }
+    .line-ITX { background: #1d5e9e; }
+    .line-경강 { background: #0069b4; }
+    .line-우이 { background: #b0c71a; }
+
+    .train-dest {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .train-arrival {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a56db;
+      flex-shrink: 0;
+    }
+    .train-arrival span { font-size: 13px; font-weight: 500; color: var(--text3); }
+
+    /* 혼잡도 바 */
+    .congestion-label {
+      font-size: 12px;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+    .cars {
+      display: flex;
+      gap: 3px;
+    }
+    .car {
+      flex: 1;
+      height: 28px;
+      border-radius: 4px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .car:hover { transform: scaleY(1.1); }
+    .car.low    { background: #22c55e; }
+    .car.mid    { background: #f59e0b; }
+    .car.high   { background: #ef4444; }
+    .car.best::after {
+      content: "★";
+      position: absolute;
+      top: -14px;
+      font-size: 12px;
+      color: #1a56db;
+    }
+
+    .congestion-legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text3);
+    }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 3px;
+      vertical-align: middle;
+    }
+
+    .time-bar {
+      background: var(--bg2);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--border3);
+      font-size: 13px;
+      color: var(--text2);
+    }
+    .time-bar input[type=time] {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 14px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .time-bar input[type=time]:focus { border-color: #1a56db; }
+    .time-bar select {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 13px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .time-bar .reset-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text3);
+    }
+    .time-bar .reset-btn:hover { border-color: #1a56db; color: #1a56db; }
+    .sim-badge {
+      display: inline-block;
+      background: var(--sim-badge-bg);
+      color: var(--sim-badge-color);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text4);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text3);
+      font-size: 15px;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #dc2626;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    /* 다크모드 토글 버튼 */
+    .dark-toggle {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+      opacity: 0.8;
+    }
+    .dark-toggle:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header style="display:flex;align-items:center;justify-content:space-between">
+  <div>
+    <h1>타이밍 ⏱</h1>
+    <p>지금 탈까, 다음 열차 탈까</p>
+  </div>
+  <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="다크모드 전환">🌙</button>
+</header>
+
+<div class="mode-tabs">
+  <div class="mode-tab active" id="tabStation" onclick="switchMode('station')">🚉 역 조회</div>
+  <div class="mode-tab" id="tabRoute" onclick="switchMode('route')">🗺 경로 탐색</div>
+</div>
+
+<div id="modeStation">
+  <div class="search-bar">
+    <div class="autocomplete-wrap">
+      <input type="text" id="stationInput" placeholder="역 이름 입력 (예: 강남, 홍대입구)" autocomplete="off" />
+      <div class="autocomplete-list" id="autocompleteList" style="display:none"></div>
+    </div>
+    <button onclick="search()">조회</button>
+  </div>
+</div>
+
+<div id="modeRoute" style="display:none">
+  <div class="route-bar">
+    <div class="route-inputs">
+      <div class="route-ac-wrap">
+        <input type="text" id="routeFrom" placeholder="출발역" autocomplete="off" />
+        <div class="autocomplete-list" id="routeFromList" style="display:none"></div>
+      </div>
+      <button class="route-swap-btn" onclick="swapRoute()" title="출발/도착 바꾸기">⇅</button>
+      <div class="route-ac-wrap">
+        <input type="text" id="routeTo" placeholder="도착역" autocomplete="off" />
+        <div class="autocomplete-list" id="routeToList" style="display:none"></div>
+      </div>
+      <button class="route-search-btn" onclick="searchRoute()">탐색</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="time-bar">
+  <span>시간 설정</span>
+  <input type="time" id="simTime" />
+  <select id="dayType">
+    <option value="weekday">평일</option>
+    <option value="saturday">토요일</option>
+    <option value="sunday">일요일</option>
+  </select>
+  <button class="reset-btn" onclick="resetTime()">현재 시각으로</button>
+  <span id="simBadge"></span>
+</div>
+
+<div class="content" id="content">
+  <div class="empty-state">
+    <div class="icon">🚇</div>
+    <p>역 이름을 입력하고 조회하세요</p>
+  </div>
+</div>
+
+<script>
+  const API_BASE = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? 'http://127.0.0.1:8000'
+    : '';
+
+  // 다크모드
+  function toggleDark() {
+    const isDark = document.body.classList.toggle('dark');
+    document.getElementById('darkToggle').textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('darkMode', isDark ? '1' : '0');
+  }
+  (function initDark() {
+    const saved = localStorage.getItem('darkMode');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (saved === '1' || (saved === null && prefersDark)) {
+      document.body.classList.add('dark');
+      document.getElementById('darkToggle').textContent = '☀️';
+    }
+  })();
+
+  // 전체 혼잡도 DB 캐시 (서버 시작 후 한 번만 로드)
+  let CONGESTION_CACHE = null;
+  async function loadCongestionCache() {
+    if (CONGESTION_CACHE) return CONGESTION_CACHE;
+    const r = await fetch(`${API_BASE}/api/congestion-all`);
+    CONGESTION_CACHE = await r.json();
+    return CONGESTION_CACHE;
+  }
+
+  let BOARDING_CACHE = null;
+  async function loadBoardingCache() {
+    if (BOARDING_CACHE) return BOARDING_CACHE;
+    const r = await fetch(`${API_BASE}/api/boarding-all`);
+    BOARDING_CACHE = await r.json();
+    return BOARDING_CACHE;
+  }
+
+  // 페이지 로드 시 백그라운드로 미리 받아둠
+  Promise.all([loadCongestionCache(), loadBoardingCache()]);
+
+  // 캐시에서 특정 역+노선+요일의 슬롯 데이터 조회
+  function getCachedSlots(stationName, line, dayType) {
+    if (!CONGESTION_CACHE) return null;
+    const entry = CONGESTION_CACHE[`${stationName}_${line}`];
+    if (!entry) return null;
+    return entry[dayType] || null;
+  }
+
+  // 현재 시각 기준 승차/하차 비율 문구 반환
+  function getBoardingContext(stationName, line, hour) {
+    if (!BOARDING_CACHE) return null;
+    const entry = BOARDING_CACHE[`${stationName}_${line}`];
+    if (!entry) return null;
+    const data = entry[hour] || entry[String(hour)];
+    if (!data) return null;
+    const { on, off } = data;
+    const total = on + off;
+    if (total < 100) return null; // 이용객 너무 적으면 표시 안 함
+    const offRatio = Math.round(off / total * 100);
+    const onRatio = 100 - offRatio;
+    if (offRatio >= 55) return { type: 'off', text: `하차 위주 (${offRatio}%) — 자리가 날 수 있어요`, on, off };
+    if (onRatio >= 55) return { type: 'on',  text: `승차 위주 (${onRatio}%) — 혼잡도 높아질 수 있어요`, on, off };
+    return { type: 'balanced', text: `승하차 균형 (승차 ${onRatio}% / 하차 ${offRatio}%)`, on, off };
+  }
+
+  // 같은 역+방향 조합은 5분간 캐시
+
+  // 시간 설정 초기화
+  function initTime() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('simTime').value = `${hh}:${mm}`;
+    const dow = now.getDay();
+    document.getElementById('dayType').value =
+      dow === 0 ? 'sunday' : dow === 6 ? 'saturday' : 'weekday';
+    updateSimBadge();
+  }
+
+  function resetTime() {
+    initTime();
+    const name = document.getElementById('stationInput').value.trim();
+    if (name) search();
+  }
+
+  function updateSimBadge() {
+    const now = new Date();
+    const curH = String(now.getHours()).padStart(2,'0');
+    const curM = String(now.getMinutes()).padStart(2,'0');
+    const simT = document.getElementById('simTime').value;
+    const simD = document.getElementById('dayType').value;
+    const curD = now.getDay() === 0 ? 'sunday' : now.getDay() === 6 ? 'saturday' : 'weekday';
+    const badge = document.getElementById('simBadge');
+    if (simT !== `${curH}:${curM}` || simD !== curD) {
+      const dayLabel = {weekday:'평일', saturday:'토요일', sunday:'일요일'}[simD];
+      badge.innerHTML = `<span class="sim-badge">시뮬레이션: ${dayLabel} ${simT}</span>`;
+    } else {
+      badge.innerHTML = '';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initTime();
+    let simTimeTimer = null;
+    let routeTimer = null;
+    document.getElementById('simTime').addEventListener('change', () => {
+      updateSimBadge();
+      clearTimeout(simTimeTimer);
+      clearTimeout(routeTimer);
+      const from = document.getElementById('routeFrom').value.trim();
+      const to   = document.getElementById('routeTo').value.trim();
+      if (from && to) routeTimer = setTimeout(() => searchRoute(), 800);
+      else if (window._lastStation) simTimeTimer = setTimeout(() => refreshSearch(), 500);
+    });
+    document.getElementById('dayType').addEventListener('change', () => {
+      updateSimBadge();
+      clearTimeout(routeTimer);
+      const from = document.getElementById('routeFrom').value.trim();
+      const to   = document.getElementById('routeTo').value.trim();
+      if (from && to) routeTimer = setTimeout(() => searchRoute(), 800);
+      else if (window._lastStation) refreshSearch();
+    });
+  });
+
+  // 실제 API 연동 전 목업 데이터
+  const MOCK_DATA = {
+    '강남': [
+      {
+        line: '2', lineName: '2호선', dest: '성수행', arrivalMin: 2,
+        cars: [70, 80, 60, 40, 35, 50, 65, 75, 55, 45]
+      },
+      {
+        line: '2', lineName: '2호선', dest: '성수행', arrivalMin: 7,
+        cars: [30, 25, 20, 15, 20, 25, 30, 35, 28, 22]
+      },
+      {
+        line: 'sin', lineName: '신분당선', dest: '광교행', arrivalMin: 4,
+        cars: [50, 45, 40, 55, 60, 58, 42, 38, 48, 52]
+      },
+    ],
+    '홍대입구': [
+      {
+        line: '2', lineName: '2호선', dest: '성수행', arrivalMin: 1,
+        cars: [85, 90, 88, 75, 60, 55, 70, 80, 85, 90]
+      },
+      {
+        line: '2', lineName: '2호선', dest: '성수행', arrivalMin: 5,
+        cars: [40, 35, 38, 42, 30, 28, 45, 50, 40, 35]
+      },
+    ],
+  };
+
+
+  function congestionLevel(pct) {
+    if (pct < 40) return 'low';
+    if (pct < 70) return 'mid';
+    return 'high';
+  }
+
+  function bestCar(cars) {
+    return cars.indexOf(Math.min(...cars));
+  }
+
+  // 슬롯 데이터에서 현재 시각 기준 앞뒤 추이 분석
+  function analyzeTrend(slots, baseMin) {
+    if (!slots) return null;
+    const entries = Object.entries(slots).map(([t, v]) => {
+      const [h, m] = t.split(':').map(Number);
+      return [h * 60 + m, v];
+    }).sort((a, b) => a[0] - b[0]);
+
+    // 현재 + 30분, +60분 혼잡도 보간
+    function interp(target) {
+      let prev = null, next = null;
+      for (const [sm, sv] of entries) {
+        if (sm <= target) prev = [sm, sv];
+        if (sm > target && !next) next = [sm, sv];
+      }
+      if (!prev) return entries[0]?.[1] ?? 0;
+      if (!next) return prev[1];
+      const ratio = (target - prev[0]) / (next[0] - prev[0]);
+      return prev[1] + (next[1] - prev[1]) * ratio;
+    }
+
+    const now = interp(baseMin);
+    const plus30 = interp(baseMin + 30);
+    const plus60 = interp(baseMin + 60);
+    const minus30 = interp(baseMin - 30);
+
+    // 추이 판단: 앞으로 30분간 변화량
+    const trend30 = plus30 - now;
+    const trend60 = plus60 - now;
+
+    return { now, plus30, plus60, minus30, trend30, trend60 };
+  }
+
+  function recommend(trains) {
+    if (!trains.length) return null;
+
+    const first = trains[0];
+    const second = trains[1];
+    const firstPct = first.congestionPct;
+
+    // 혼잡도 데이터 없으면 도착 시간만으로 판단
+    if (firstPct === null) {
+      if (!second) return { board: true, msg: '지금 타세요', reason: `${first.arrivalMsg || first.arrivalMin + '분 후'} 도착`, detail: null };
+      return { board: true, msg: '지금 타세요', reason: '혼잡도 데이터 없음', detail: null };
+    }
+
+    const secondPct = second?.congestionPct ?? null;
+    const waitMin = second ? (second.arrivalMin - first.arrivalMin) : null;
+    const pctStr = `현재 혼잡도 ${Math.round(firstPct)}%`;
+
+    // 슬롯 기반 추이 분석
+    const simTime = document.getElementById('simTime').value;
+    const [bh, bm] = simTime ? simTime.split(':').map(Number) : [new Date().getHours(), new Date().getMinutes()];
+    const baseMin = bh * 60 + bm;
+    const trend = analyzeTrend(first.slots, baseMin);
+    console.log('[recommend]', { firstPct, nowPct: trend?.now, trend30: trend?.trend30, secondPct });
+
+    const diff = secondPct !== null ? firstPct - secondPct : 0;
+
+    // === 기본 판단 (피크 추이 → 열차 간 비교 → 기본값) ===
+    let base;
+
+    // 현재 시각 기준 혼잡도 (열차 도착 시각이 아닌 지금)
+    const nowPct = trend ? trend.now : firstPct;
+
+    // 1. 피크 하강 중: 혼잡도가 빠지는 시간대면 기다리는 게 이득
+    if (trend && trend.trend30 <= -10 && nowPct >= 70) {
+      base = {
+        board: false,
+        msg: '조금 기다리세요',
+        reason: '피크 하강 중',
+        detail: `지금 ${Math.round(nowPct)}% → 30분 후 ${Math.round(trend.plus30)}% 예상`
+      };
+    }
+    // 2. 피크 진입 중: 앞으로 더 혼잡해지면 지금 타는 게 이득
+    else if (trend && trend.trend30 >= 10 && nowPct < 100) {
+      base = {
+        board: true,
+        type: 'rising',
+        msg: '지금 타세요',
+        reason: '피크 진입 중',
+        detail: `지금 ${Math.round(nowPct)}% → 30분 후 ${Math.round(trend.plus30)}% 예상`
+      };
+    }
+    // 3. 다음 열차가 15%p 이상 여유로우면 대기 권장
+    else if (firstPct >= 70 && secondPct !== null && diff >= 15) {
+      base = {
+        board: false,
+        msg: '다음 열차를 추천합니다',
+        reason: `${waitMin}분 후 열차가 더 여유롭습니다`,
+        detail: `${Math.round(firstPct)}% → ${Math.round(secondPct)}%`
+      };
+    }
+    // 4. 기본값
+    else if (firstPct < 40) {
+      base = { board: true, msg: '지금 타세요', reason: '여유 있습니다', detail: pctStr };
+    }
+    else if (firstPct < 70) {
+      base = { board: true, msg: '지금 타세요', reason: '보통 수준입니다', detail: pctStr };
+    }
+    else {
+      base = { board: true, msg: '지금 타세요', reason: '혼잡하지만 다음 열차도 비슷합니다', detail: pctStr };
+    }
+
+    // AI 코멘트용 내부 필드
+    base._nowPct = nowPct;
+    base._plus30 = trend?.plus30 ?? firstPct;
+    base._trend30 = trend?.trend30 ?? 0;
+
+    return base;
+  }
+
+  function congestionLabel(pct) {
+    if (pct === null) return '정보 없음';
+    if (pct < 40)  return '여유';
+    if (pct < 70)  return '보통';
+    if (pct < 90) return '혼잡';
+    return '매우 혼잡';
+  }
+
+  function congestionColor(pct) {
+    if (pct === null) return '#d1d5db';
+    if (pct < 40)  return '#22c55e';
+    if (pct < 70)  return '#f59e0b';
+    if (pct < 90) return '#ef4444';
+    return '#7f1d1d';
+  }
+
+  function LINE_COLOR(badge) {
+    const map = {
+      '1':'#0052a4','2':'#00a84d','3':'#f36b1c','4':'#00a5de',
+      '5':'#8b50a4','6':'#c55c1d','7':'#54640d','8':'#e31d5a',
+      '9':'#bfa44a','sin':'#d31145','경의중앙':'#77c4a3','공항':'#4494d0','GTX':'#6d28d9',
+      '수인분당':'#f5a200','ITX':'#1d5e9e','경강':'#0069b4','우이':'#b0c71a'
+    };
+    return map[badge] || '#6b7280';
+  }
+
+  function renderTrainCard(train) {
+    const pct = train.congestionPct;
+    const slotLabel = train.arrivalTime ? `${train.arrivalTime} 예측` : '현재 기준';
+    const arrivalHtml = `<span class="train-arrival" style="font-size:16px;font-weight:800;color:#1a56db">${train.arrivalMsg || (train.arrivalMin + '<span style="font-size:11px;font-weight:500;color:#6b7280">분 후</span>')}</span>`;
+
+    const congestionHtml = pct !== null ? (() => {
+      const barWidth = Math.min(pct, 130);
+      const color = congestionColor(pct);
+      const label = congestionLabel(pct);
+      return `
+        <div class="congestion-label" style="margin-top:8px">혼잡도 <span style="color:#9ca3af;font-size:10px">${slotLabel}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div style="flex:1;background:#f3f4f6;border-radius:4px;height:16px;overflow:hidden">
+            <div style="width:${barWidth / 1.3}%;background:${color};height:100%;border-radius:4px"></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:${color};min-width:52px;text-align:right">${Math.round(pct)}% ${label}</span>
+        </div>`;
+    })() : `<div style="margin-top:8px;font-size:11px;color:#d1d5db">혼잡도 통계 미제공 노선</div>`;
+
+    return `
+      <div class="train-card">
+        <div class="train-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600">${train.dest}</span>
+          ${arrivalHtml}
+        </div>
+        ${congestionHtml}
+      </div>`;
+  }
+
+  function renderTrendChart(slots, baseMin) {
+    if (!slots) return '';
+    const entries = Object.entries(slots).map(([t, v]) => {
+      const [h, m] = t.split(':').map(Number);
+      return { min: h * 60 + m, v, label: t };
+    }).sort((a, b) => a.min - b.min);
+
+    if (!entries.length) return '';
+
+    // 현재 시각 앞뒤 5개 슬롯씩 (총 최대 11개)
+    let nowIdx = -1;
+    entries.forEach((e, i) => { if (e.min <= baseMin) nowIdx = i; });
+    const start = Math.max(0, nowIdx - 4);
+    const end = Math.min(entries.length - 1, nowIdx + 6);
+    const visible = entries.slice(start, end + 1);
+    if (visible.length < 2) return '';
+
+    const maxV = Math.max(...visible.map(e => e.v), 1);
+    const BAR_H = 32;
+
+    const bars = visible.map(e => {
+      const h = Math.round((e.v / 130) * BAR_H);  // 130%를 최대로
+      const color = congestionColor(e.v);
+      const isCurrent = e.min <= baseMin && baseMin < e.min + 30;
+      const label = e.label.replace(':00', '시').replace(':30', ':30');
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+        <div style="font-size:9px;color:${isCurrent ? '#1a56db' : '#9ca3af'};font-weight:${isCurrent ? '700' : '400'}">${Math.round(e.v)}%</div>
+        <div style="width:100%;height:${BAR_H}px;display:flex;align-items:flex-end">
+          <div style="width:100%;height:${Math.max(2, h)}px;background:${color};border-radius:2px 2px 0 0;opacity:${isCurrent ? 1 : 0.45}"></div>
+        </div>
+        <div style="font-size:9px;color:${isCurrent ? '#1a56db' : '#9ca3af'};font-weight:${isCurrent ? '700' : '400'};white-space:nowrap">${label}</div>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:#f8faff;border-radius:8px;padding:8px 6px 4px;margin-bottom:8px">
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:4px;padding:0 2px">시간대별 혼잡도 추이</div>
+      <div style="display:flex;gap:2px;align-items:flex-end">${bars}</div>
+    </div>`;
+  }
+
+  function renderDirectionSplit(trains, lineName) {
+    const LABEL_MAP = { '상선':'상행', '하선':'하행', '내선':'내선(순환)', '외선':'외선(순환)', '상행':'상행', '하행':'하행' };
+
+    // 방향별 그룹핑
+    const dirGroups = {};
+    trains.forEach(t => {
+      if (!dirGroups[t.direction]) dirGroups[t.direction] = [];
+      dirGroups[t.direction].push(t);
+    });
+    const foundDirs = Object.keys(dirGroups);
+
+    // 좌우 고정 쌍 결정: 내선/외선이 있으면 그걸로, 아니면 상행/하행
+    const isCircular = foundDirs.some(d => d === '내선' || d === '외선');
+    const fixedDirs = isCircular ? ['내선', '외선'] : ['상행', '하행'];
+    // 데이터에 있는 방향 중 고정 쌍에 없는 것 (예: 상선/하선) → 고정 쌍으로 매핑
+    const ALIAS = { '상선': '상행', '하선': '하행' };
+    foundDirs.forEach(d => {
+      const mapped = ALIAS[d];
+      if (mapped && !dirGroups[mapped]) {
+        dirGroups[mapped] = dirGroups[d];
+        delete dirGroups[d];
+      }
+    });
+
+    let html = `<div class="direction-split">`;
+    fixedDirs.forEach(dir => {
+      const dirTrains = dirGroups[dir] || [];
+      const rec = dirTrains.length ? recommend(dirTrains) : null;
+      const dirLabel = LABEL_MAP[dir] || dir;
+      // 행선지 목록 (중복 제거, "행" 제거 후 표시, 2호선 순환 성수 제외)
+      const dests = [...new Set(dirTrains.map(t => t.dest?.replace(/행$/, '')).filter(d => d && !(lineName === '2호선' && d === '성수')))];
+      const destStr = dests.length ? ` <span style="font-size:11px;font-weight:400;color:var(--text3)">(${dests.join(', ')})</span>` : '';
+      html += `<div class="direction-col">
+        <div class="direction-header">${dirLabel}${destStr}</div>`;
+      if (rec) {
+        const recBg = rec.type === 'rising' ? '#fff7ed' : rec.board ? '#eff6ff' : '#fef9c3';
+        const recColor = rec.type === 'rising' ? '#c2410c' : rec.board ? '#1a56db' : '#92400e';
+        const recIcon = rec.type === 'rising' ? '⚠️' : rec.board ? '✅' : '⏳';
+        // 승하차 맥락
+        const simTime2 = document.getElementById('simTime').value;
+        const curHour = simTime2 ? parseInt(simTime2.split(':')[0]) : new Date().getHours();
+        const stationKey = window._lastStation?.replace(/역$/, '');
+        const lineNameMap2 = CONGESTION_NAME_BY_LINE[stationKey];
+        const stationForBoarding = lineNameMap2?.[lineName] || stationKey;
+        const boarding = stationForBoarding && lineName ? getBoardingContext(stationForBoarding, lineName, curHour) : null;
+        html += `
+        <div style="background:${recBg};border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px">
+          <div style="font-weight:700;color:${recColor}">${recIcon} ${rec.msg}</div>
+          ${rec.reason ? `<div style="color:#6b7280;margin-top:3px">${rec.reason}</div>` : ''}
+          ${rec.detail ? `<div style="color:#9ca3af;margin-top:2px;font-size:11px">${rec.detail}</div>` : ''}
+          ${boarding ? `<div style="color:#6b7280;margin-top:4px;font-size:11px;border-top:1px solid rgba(0,0,0,0.06);padding-top:4px">👥 ${boarding.text}</div>` : ''}
+        </div>`;
+      }
+      // 시간대별 추이 차트
+      const simTime = document.getElementById('simTime').value;
+      const [bh, bm] = simTime ? simTime.split(':').map(Number) : [new Date().getHours(), new Date().getMinutes()];
+      const baseMin = bh * 60 + bm;
+      const slots = dirTrains[0]?.slots || null;
+      html += renderTrendChart(slots, baseMin);
+
+      if (dirTrains.length) {
+        html += dirTrains.map(t => renderTrainCard(t)).join('');
+      } else {
+        html += `<div style="color:#d1d5db;font-size:12px;padding:12px 0;text-align:center">현재 운행 정보 없음</div>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+
+  let activeLineTab = null;
+  const CONGESTION_UNSUPPORTED = new Set(['경의중앙', '공항철도', 'GTX-A', 'ITX-청춘', '수인·분당선', '경강선', '우이신설선', '신분당선', '신림선']);
+
+  function renderTrains(stationName, trains, updatedAt) {
+    const updatedStr = updatedAt ? updatedAt.split(' ')[1].slice(0, 5) : '';
+
+    // 노선별 그룹핑
+    const groups = {};
+    trains.forEach(t => {
+      if (!groups[t.lineName]) groups[t.lineName] = { badge: t.line, trains: [] };
+      groups[t.lineName].trains.push(t);
+    });
+    const LINE_ORDER = ['1호선','2호선','3호선','4호선','5호선','6호선','7호선','8호선','9호선','경의중앙','공항철도','신분당선','GTX-A'];
+    const lineNames = Object.keys(groups).sort((a, b) => {
+      const ai = LINE_ORDER.indexOf(a), bi = LINE_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+    if (!activeLineTab || !groups[activeLineTab]) activeLineTab = lineNames[0];
+
+    const displayName = (stationName.endsWith('역') || stationName.includes('(')) ? stationName : stationName + '역';
+    let html = `<div class="station-label"><strong>${displayName}</strong> 실시간 도착 정보${updatedStr ? ` <span style="font-size:11px;color:#9ca3af">· ${updatedStr} 수신</span>` : ''}</div>`;
+
+    const CONGESTION_UNSUPPORTED = new Set(['경의중앙', '공항철도', 'GTX-A', 'ITX-청춘', '수인·분당선', '경강선', '우이신설선', '신분당선', '신림선']);
+
+    // 노선 탭 + 새로고침 버튼
+    html += `<div class="line-tabs">`;
+    lineNames.forEach(ln => {
+      const bg = LINE_COLOR(groups[ln].badge);
+      const unsupported = CONGESTION_UNSUPPORTED.has(ln);
+      html += `<button class="line-tab${ln === activeLineTab ? ' active' : ''}${unsupported ? ' unsupported' : ''}" style="background:${bg}"
+        onclick="switchTab('${ln}', this)">${ln}</button>`;
+    });
+    html += `<button class="refresh-btn" onclick="refreshSearch()" title="새로고침">↺</button>`;
+    html += `</div>`;
+
+    const activeUnsupported = CONGESTION_UNSUPPORTED.has(activeLineTab);
+    const trainListHtml = activeUnsupported
+      ? `<div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px">
+           <div style="font-size:24px;margin-bottom:8px">ℹ️</div>
+           <div style="font-weight:600;color:#6b7280;margin-bottom:4px">${activeLineTab} — 혼잡도 미지원 노선</div>
+           <div>서울교통공사 운영 노선(1~8호선)만 혼잡도 통계가 제공됩니다.</div>
+         </div>`
+      : renderDirectionSplit(groups[activeLineTab]?.trains || [], activeLineTab);
+    html += `<div id="trainList">${trainListHtml}</div>`;
+    return html;
+  }
+
+  async function refreshSearch() {
+    if (!window._lastStation) return;
+    window._pendingTab = activeLineTab;
+    document.getElementById('stationInput').value = window._lastStation;
+    await search();
+    window._pendingTab = undefined;  // 완료 후 초기화
+  }
+
+  function switchTab(lineName, btn) {
+    activeLineTab = lineName;
+    btn.closest('.line-tabs').querySelectorAll('.line-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    if (!window._lastTrains) return;
+    if (CONGESTION_UNSUPPORTED.has(lineName)) {
+      document.getElementById('trainList').innerHTML = `
+        <div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px">
+          <div style="font-size:24px;margin-bottom:8px">ℹ️</div>
+          <div style="font-weight:600;color:#6b7280;margin-bottom:4px">${lineName} — 혼잡도 미지원 노선</div>
+          <div>서울교통공사 운영 노선(1~8호선)만 혼잡도 통계가 제공됩니다.</div>
+        </div>`;
+      return;
+    }
+    const filtered = window._lastTrains.filter(t => t.lineName === lineName);
+    document.getElementById('trainList').innerHTML = renderDirectionSplit(filtered, lineName);
+  }
+
+  function formatArrivalMsg(msg, barvlDt) {
+    if (!msg) return null;
+    // "도착" 상태
+    if (msg.includes('도착')) return '곧 도착';
+    // "출발" 상태
+    if (msg.includes('출발')) return '출발';
+    // "[N]번째 전역 (역명)" → "N정거장 전"
+    const stopsMatch = msg.match(/\[(\d+)\]번째 전역/);
+    if (stopsMatch) return `${stopsMatch[1]}정거장 전`;
+    // "전역 도착" (바로 전 역에서 출발)
+    if (msg.includes('전역')) return '1정거장 전';
+    // "N분 후 (역명)" → "N분 후"
+    const minMatch = msg.match(/(\d+)분 후/);
+    if (minMatch) return `${minMatch[1]}분 후`;
+    return null;
+  }
+
+  // 역명이 다르지만 같은 역으로 통합 표시할 매핑 {입력 정규화명: [API 조회명들]}
+  const STATION_MERGE_MAP = {
+    '서울역': ['서울역', '서울'],
+    '총신대입구(이수)': ['총신대입구(이수)', '이수', '총신대입구'],
+  };
+
+  // 혼잡도 DB 역명이 노선별로 다른 경우: { 표시역명: { 호선명: 혼잡도DB역명 } }
+  const CONGESTION_NAME_BY_LINE = {
+    '총신대입구(이수)': { '4호선': '총신대입구', '7호선': '이수' },
+  };
+
+  async function fetchRows(queryName) {
+    const res = await fetch(`${API_BASE}/api/arrivals/${encodeURIComponent(queryName)}`);
+    const data = await res.json();
+    return data?.realtimeArrivalList || [];
+  }
+
+  async function search() {
+    let name = document.getElementById('stationInput').value.trim();
+    if (!name) return;
+    if (name.endsWith('역')) name = name.slice(0, -1);
+    // 입력을 표시명으로 변환 (서울 → 서울역)
+    const displayName = Object.keys(STATION_MERGE_MAP).find(k =>
+      STATION_MERGE_MAP[k].includes(name) || STATION_MERGE_MAP[k].includes(name + '역')
+    ) || name;
+    // 새 역이면 탭 초기화, 같은 역 재조회면 탭 유지
+    if (displayName !== window._lastStation) {
+      activeLineTab = null;
+      window._pendingTab = undefined;
+    }
+
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading">🔍 조회 중...</div>';
+
+    try {
+      // 병합 대상이면 여러 이름으로 동시 조회
+      const queryNames = STATION_MERGE_MAP[displayName] || [name];
+      const allRowArrays = await Promise.all(queryNames.map(fetchRows));
+      const rows = allRowArrays.flat();
+
+      if (rows && rows.length > 0) {
+        const LINE_MAP = {
+          '1001': { badge: '1',    name: '1호선' },
+          '1002': { badge: '2',    name: '2호선' },
+          '1003': { badge: '3',    name: '3호선' },
+          '1004': { badge: '4',    name: '4호선' },
+          '1005': { badge: '5',    name: '5호선' },
+          '1006': { badge: '6',    name: '6호선' },
+          '1007': { badge: '7',    name: '7호선' },
+          '1008': { badge: '8',    name: '8호선' },
+          '1009': { badge: '9',      name: '9호선' },
+          '1032': null,  // statnNm으로 분기: 서울역→GTX-A, 그 외→경의중앙
+          '1063': { badge: '경의중앙', name: '경의중앙' },
+          '1065': { badge: '공항',    name: '공항철도' },
+          '1067': { badge: 'ITX',    name: 'ITX-청춘' },
+          '1075': { badge: '수인분당', name: '수인·분당선' },
+          '1077': { badge: 'sin',    name: '신분당선' },
+          '1081': { badge: '경강',    name: '경강선' },
+          '1092': { badge: '우이',    name: '우이신설선' },
+          '1094': { badge: '신림',    name: '신림선' },
+        };
+        function resolveLineInfo(r) {
+          if (r.subwayId === '1032') {
+            return r.statnNm === '서울역'
+              ? { badge: 'GTX', name: 'GTX-A' }
+              : { badge: '경의중앙', name: '경의중앙' };
+          }
+          return LINE_MAP[r.subwayId] || null;
+        }
+        const LINE_ORDER = ['1호선','2호선','3호선','4호선','5호선','6호선','7호선','8호선','9호선','수인·분당선','경의중앙','경강선','공항철도','우이신설선','신분당선','ITX-청춘','GTX-A'];
+        const updatedAt = rows[0]?.recptnDt || null;
+
+        const DIR_MAP = { '상행': '상선', '하행': '하선', '내선': '내선', '외선': '외선' };
+
+        function sortKey(r) {
+          const dt = r.barvlDt || 0;
+          if (dt > 0) return dt;
+          // barvlDt=0인 경우 arvlMsg2로 보조 정렬
+          const msg = r.arvlMsg2 || '';
+          if (msg.includes('도착') || msg.includes('출발')) return 0;
+          const stopsMatch = msg.match(/\[(\d+)\]번째 전역/);
+          if (stopsMatch) return parseInt(stopsMatch[1]) * 120; // 정거장당 약 2분 추정
+          if (msg.includes('전역')) return 120;
+          return 0;
+        }
+        // 노선별·방향별 각 2개씩 보장 (상행 2 + 하행 2)
+        const sorted = [...rows].sort((a, b) => sortKey(a) - sortKey(b));
+        const seen = {};  // "subwayId_방향" → 카운트
+        const targetRows = [];
+        for (const r of sorted) {
+          const dir = ['상행','상선','내선'].includes(r.updnLine) ? 'up' : 'down';
+          const key = `${r.subwayId}_${dir}`;
+          seen[key] = (seen[key] || 0) + 1;
+          if (seen[key] <= 2) targetRows.push(r);
+        }
+
+        // 시간 설정값 읽기
+        const simTime = document.getElementById('simTime').value;
+        const dayType = document.getElementById('dayType').value;
+
+        // 열차별 도착 시점 기준 혼잡도 병렬 조회
+        const trainCongestions = await Promise.all(targetRows.map(async r => {
+          const lineInfo = resolveLineInfo(r);
+          if (!lineInfo) return null;
+          try {
+            const barvlDt = r.barvlDt || 0;
+            const params = new URLSearchParams({ barvlDt, simTime, dayType });
+            // 노선별로 혼잡도 DB 역명이 다른 경우 처리
+            const lineNameMap = CONGESTION_NAME_BY_LINE[displayName];
+            const stationForCongestion = lineNameMap?.[lineInfo.name] || displayName;
+            const cr = await fetch(`${API_BASE}/api/congestion/${encodeURIComponent(stationForCongestion)}/${encodeURIComponent(lineInfo.name)}?${params}`);
+            const cd = await cr.json();
+            return cd.error ? null : cd;
+          } catch { return null; }
+        }));
+
+        // 노선·방향별 슬롯 데이터 수집 (첫 번째 응답에서만)
+        const slotsByLineDir = {};
+        trainCongestions.forEach((cd, i) => {
+          if (!cd?.slots) return;
+          const lineInfo = resolveLineInfo(targetRows[i]);
+          if (!lineInfo) return;
+          const direction = targetRows[i].updnLine;
+          const congestionKey = DIR_MAP[direction] || direction;
+          const key = `${lineInfo.name}_${congestionKey}`;
+          if (!slotsByLineDir[key]) slotsByLineDir[key] = cd.slots[congestionKey] || null;
+        });
+
+        const trains = targetRows.map((r, i) => {
+          const lineInfo = resolveLineInfo(r) || { badge: r.subwayId, name: r.subwayId };
+          const cData = trainCongestions[i];
+          const direction = r.updnLine;
+          const congestionKey = DIR_MAP[direction] || direction;
+          const congestionPct = cData?.directions?.[congestionKey] ?? null;
+          const slots = slotsByLineDir[`${lineInfo.name}_${congestionKey}`] || null;
+          return {
+            line: lineInfo.badge,
+            lineName: lineInfo.name,
+            dest: r.bstatnNm + '행',
+            arrivalMsg: formatArrivalMsg(r.arvlMsg2, r.barvlDt),
+            arrivalMin: r.barvlDt > 0 ? Math.max(1, Math.round(r.barvlDt / 60)) : 0,
+            arrivalTime: cData?.arrival_time || null,
+            direction,
+            congestionPct,
+            slots,
+          };
+        });
+        // 탭 유지: _pendingTab이 있으면 사용, 없으면 현재 activeLineTab 유지 (새 역 조회 시만 null)
+        if (window._pendingTab !== undefined) {
+          activeLineTab = window._pendingTab;
+          window._pendingTab = undefined;
+        }
+        window._lastTrains = trains;
+        window._lastStation = displayName;
+        content.innerHTML = renderTrains(displayName, trains, updatedAt);
+        return;
+      }
+
+      const errCode = rows?.errorMessage?.code || '';
+      if (errCode === 'INFO-200') {
+        content.innerHTML = `<div class="error-box">"${displayName}" 역 정보가 없습니다. 역 이름을 확인해주세요.</div>`;
+        return;
+      }
+    } catch (e) {
+      content.innerHTML = `<div class="error-box">서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.</div>`;
+      return;
+    }
+  }
+
+  // 자동완성
+  let acIndex = -1;
+  let acSuppressOpen = false;
+  const acInput = document.getElementById('stationInput');
+  const acList = document.getElementById('autocompleteList');
+
+  acInput.addEventListener('input', async () => {
+    const q = acInput.value.trim();
+    acIndex = -1;
+    acSuppressOpen = false;
+    if (!q) { acList.style.display = 'none'; return; }
+    let names;
+    try {
+      const res = await fetch(`${API_BASE}/api/stations?q=${encodeURIComponent(q)}`);
+      names = await res.json();
+    } catch { acList.style.display = 'none'; return; }
+    if (!names.length) { acList.style.display = 'none'; return; }
+    if (acSuppressOpen) return;
+    acList.innerHTML = names.slice(0, 10).map((n, i) =>
+      `<div class="autocomplete-item" onmousedown="selectStation('${n}')">${n}</div>`
+    ).join('');
+    acList.style.display = 'block';
+  });
+
+  function selectStation(name) {
+    acInput.value = name;
+    acList.style.display = 'none';
+    search();
+  }
+
+  acInput.addEventListener('keydown', e => {
+    const items = acList.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      acIndex = Math.min(acIndex + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      acIndex = Math.max(acIndex - 1, -1);
+      items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      acSuppressOpen = true;
+      const val = acInput.value.trim().replace(/역$/, '');
+      const exact = [...items].find(el => el.textContent.replace(/역$/, '') === val);
+      if (acIndex >= 0 && items[acIndex]) {
+        selectStation(items[acIndex].textContent);
+      } else if (items.length === 1) {
+        selectStation(items[0].textContent);
+      } else if (exact) {
+        selectStation(exact.textContent);
+      } else {
+        acList.style.display = 'none';
+        search();
+      }
+    } else if (e.key === 'Escape') {
+      acSuppressOpen = true;
+      acList.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrap') && !e.target.closest('.route-ac-wrap')) {
+      acList.style.display = 'none';
+      document.getElementById('routeFromList').style.display = 'none';
+      document.getElementById('routeToList').style.display = 'none';
+    }
+  });
+
+  // ── 모드 전환 ──────────────────────────────────────────
+  function switchMode(mode) {
+    document.getElementById('modeStation').style.display = mode === 'station' ? '' : 'none';
+    document.getElementById('modeRoute').style.display   = mode === 'route'   ? '' : 'none';
+    document.getElementById('tabStation').classList.toggle('active', mode === 'station');
+    document.getElementById('tabRoute').classList.toggle('active', mode === 'route');
+    document.getElementById('content').innerHTML = '<div class="empty-state"><div class="icon">🚇</div><p>' +
+      (mode === 'station' ? '역 이름을 입력하고 조회하세요' : '출발역과 도착역을 입력하세요') + '</p></div>';
+  }
+
+  // ── 노선 그래프 ─────────────────────────────────────────
+  const LINE_ORDERS = {
+    '2호선': [
+      '시청','을지로입구','을지로3가','을지로4가','동대문역사문화공원','신당','상왕십리','왕십리',
+      '한양대','뚝섬','성수','건대입구','구의','강변','잠실나루','잠실','잠실새내','종합운동장',
+      '삼성','선릉','역삼','강남','교대','서초','방배','사당','낙성대','서울대입구','봉천','신림',
+      '신대방','구로디지털단지','대림','신도림','문래','영등포구청','당산','합정','홍대입구',
+      '신촌(지하)','이대','아현','충정로',
+      // 성수지선
+      '성수E','용답','신답','용두','신설동',
+      // 신정지선
+      '까치산','신정네거리','양천구청','도림천',
+    ],
+    '3호선': [
+      '지축','구파발','녹번','불광','독립문','경복궁','안국','종로3가','을지로3가',
+      '충무로','동대입구','약수','금호','옥수','압구정','신사','잠원','고속터미널',
+      '교대','남부터미널','양재','매봉','도곡','대치','학여울','대청','일원','수서',
+      '가락시장','경찰병원','오금',
+      '무악재','홍제','연신내',
+    ],
+    '4호선': [
+      '불암산','상계','노원','창동','쌍문','수유','미아','미아사거리','길음',
+      '성신여대입구','한성대입구','혜화','동대문','동대문역사문화공원','충무로',
+      '명동','회현','서울역','숙대입구','삼각지','신용산','이촌','동작',
+      '총신대입구','사당','남태령',
+    ],
+    '5호선': [
+      '방화','개화산','김포공항','송정','마곡','발산','우장산','화곡','까치산',
+      '신정','목동','오목교','양평','영등포구청','영등포시장','신길','여의도',
+      '여의나루','마포','애오개','충정로','서대문','광화문','종로3가','을지로4가',
+      '동대문역사문화공원','청구','신금호','행당','왕십리','마장','답십리','장한평',
+      '군자','아차산','광나루','천호','강동','강일','미사','하남풍산','하남시청','하남검단산',
+      // 마천지선
+      '둔촌동','올림픽공원(한국체대)','방이','오금','개롱','거여','마천',
+      // 공덕·명일 구간
+      '공덕','명일','고덕','상일동',
+    ],
+    '6호선': [
+      '응암','역촌','불광','독바위','연신내','구산','새절','증산','디지털미디어시티',
+      '월드컵경기장','마포구청','망원','합정','상수','광흥창','대흥','공덕',
+      '효창공원앞','삼각지','녹사평','이태원','한강진','버티고개','약수','청구',
+      '신당','동묘앞','창신','보문','안암','고려대','월곡','상월곡','돌곶이',
+      '석계','태릉입구','화랑대','봉화산','신내','응암S',
+    ],
+    '7호선': [
+      '장암','도봉산','수락산','마들','노원','중계','하계','공릉','태릉입구',
+      '먹골','중화','상봉','면목','사가정','용마산','중곡','군자','어린이대공원',
+      '건대입구','자양(뚝섬한강공원)','청담','강남구청','학동','논현',
+      '반포','고속터미널','내방','이수','남성','숭실대입구','상도','장승배기',
+      '신대방삼거리','보라매','신풍','대림','남구로','가산디지털단지','철산',
+      '광명사거리','온수','천왕',
+    ],
+    '8호선': [
+      '암사역사공원','암사','천호','강동구청','몽촌토성','잠실','석촌','송파',
+      '가락시장','문정','장지','복정','남위례','산성','남한산성입구','단대오거리',
+      '신흥','수진','모란',
+    ],
+  };
+
+  // 2호선 순환: 시청↔충정로 연결, 성수지선/신정지선 분기
+  const LINE_LOOPS = { '2호선': ['시청', '충정로'] };
+  const LINE_BRANCHES = {
+    '2호선': [
+      { branch: ['성수','성수E','용답','신답','용두','신설동'] },
+      { branch: ['신도림','까치산','신정네거리','양천구청','도림천'] },
+    ],
+    '3호선': [
+      { branch: ['불광','무악재','홍제','연신내'] },
+    ],
+    '5호선': [
+      { branch: ['강동','강일','미사','하남풍산','하남시청','하남검단산'] },
+      { branch: ['강동','둔촌동','올림픽공원(한국체대)','방이','오금','개롱','거여','마천'] },
+      { branch: ['왕십리','마장','답십리','장한평','군자','아차산','광나루','천호','강동','명일','고덕','상일동'] },
+    ],
+    '6호선': [
+      { branch: ['응암','응암S'] },
+    ],
+  };
+
+  // 인접 역 그래프 구축
+  function buildGraph() {
+    const graph = {}; // { 역명: [{역명, 노선}] }
+    function addEdge(a, b, line) {
+      if (!graph[a]) graph[a] = [];
+      if (!graph[b]) graph[b] = [];
+      graph[a].push({ to: b, line });
+      graph[b].push({ to: a, line });
+    }
+    for (const [line, stations] of Object.entries(LINE_ORDERS)) {
+      // 기본 순서 연결 (지선/순환 구간 제외한 메인 구간)
+      const mainEnd = line === '2호선' ? stations.indexOf('충정로') :
+                      line === '3호선' ? stations.indexOf('오금') :
+                      line === '5호선' ? stations.indexOf('강동') :
+                      line === '6호선' ? stations.indexOf('신내') :
+                      stations.length - 1;
+      for (let i = 0; i < mainEnd; i++) {
+        addEdge(stations[i], stations[i+1], line);
+      }
+      // 2호선 순환
+      if (line === '2호선') addEdge('시청', '충정로', line);
+      // 지선/분기
+      const branches = LINE_BRANCHES[line] || [];
+      for (const { branch } of branches) {
+        for (let i = 0; i < branch.length - 1; i++) {
+          addEdge(branch[i], branch[i+1], line);
+        }
+      }
+    }
+    return graph;
+  }
+  const SUBWAY_GRAPH = buildGraph();
+
+  // BFS 경로 탐색 (환승 최소화 우선, 그다음 역 수)
+  function findRoute(from, to) {
+    if (from === to) return null;
+    const queue = [{ station: from, path: [{ station: from, line: null }], transfers: 0, currentLine: null }];
+    const visited = new Map(); // station -> {transfers, steps}
+    while (queue.length) {
+      queue.sort((a, b) => a.transfers !== b.transfers ? a.transfers - b.transfers : a.path.length - b.path.length);
+      const { station, path, transfers, currentLine } = queue.shift();
+      const vKey = `${station}_${currentLine}`;
+      if (visited.has(vKey)) continue;
+      visited.set(vKey, true);
+      if (station === to) return path;
+      const neighbors = SUBWAY_GRAPH[station] || [];
+      for (const { to: next, line } of neighbors) {
+        const newTransfers = (currentLine && line !== currentLine) ? transfers + 1 : transfers;
+        queue.push({
+          station: next,
+          path: [...path, { station: next, line }],
+          transfers: newTransfers,
+          currentLine: line,
+        });
+      }
+    }
+    return null;
+  }
+
+  // 경로를 구간(segment)으로 변환
+  function pathToSegments(path) {
+    if (!path || path.length < 2) return [];
+    const segments = [];
+    let segStart = 0;
+    let currentLine = path[1].line;
+    for (let i = 2; i < path.length; i++) {
+      if (path[i].line !== currentLine) {
+        segments.push({ line: currentLine, stations: path.slice(segStart, i).map(p => p.station) });
+        segStart = i - 1;
+        currentLine = path[i].line;
+      }
+    }
+    segments.push({ line: currentLine, stations: path.slice(segStart).map(p => p.station) });
+    return segments;
+  }
+
+  // 경로 탐색 실행
+  async function searchRoute() {
+    const from = document.getElementById('routeFrom').value.trim().replace(/역$/, '');
+    const to   = document.getElementById('routeTo').value.trim().replace(/역$/, '');
+    if (!from || !to) return;
+
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading">🔍 경로 탐색 중...</div>';
+
+    // 역명 정규화 (STATION_MERGE_MAP 적용)
+    const normFrom = Object.keys(STATION_MERGE_MAP).find(k => STATION_MERGE_MAP[k].includes(from) || STATION_MERGE_MAP[k].includes(from+'역')) || from;
+    const normTo   = Object.keys(STATION_MERGE_MAP).find(k => STATION_MERGE_MAP[k].includes(to)   || STATION_MERGE_MAP[k].includes(to+'역'))   || to;
+
+    const path = findRoute(normFrom, normTo);
+    if (!path) {
+      content.innerHTML = `<div class="error-box">경로를 찾을 수 없습니다. (2~8호선 범위 내 역인지 확인해주세요)</div>`;
+      return;
+    }
+
+    const segments = pathToSegments(path);
+    const simTime = document.getElementById('simTime').value;
+    const dayType = document.getElementById('dayType').value;
+
+    // 각 구간 혼잡도 조회
+    const LINE_BADGE_MAP = { '2호선':'2','3호선':'3','4호선':'4','5호선':'5','6호선':'6','7호선':'7','8호선':'8' };
+    const LINE_COLOR_MAP = {
+      '2호선':'#00a84d','3호선':'#f36b1c','4호선':'#00a5de','5호선':'#8b50a4',
+      '6호선':'#c55c1d','7호선':'#54640d','8호선':'#e31d5a',
+    };
+
+    // 구간 진행 방향 판단: LINE_ORDERS 인덱스 증가 = 하선(2호선은 외선)
+    function getSegmentDirection(line, fromStation, toStation) {
+      const order = LINE_ORDERS[line];
+      if (!order) return null;
+      const fi = order.indexOf(fromStation);
+      const ti = order.indexOf(toStation);
+      if (fi === -1 || ti === -1) return null;
+      if (line === '6호선') return null; // 순환, 양방향 표시
+      const isForward = fi < ti;
+      if (line === '2호선') return isForward ? '외선' : '내선';
+      return isForward ? '하선' : '상선';
+    }
+
+    const cache = await loadCongestionCache();
+    const [bh, bm] = simTime ? simTime.split(':').map(Number) : [new Date().getHours(), new Date().getMinutes()];
+    const baseMin = bh * 60 + bm;
+
+    const segmentData = segments.map(seg => {
+      const direction = getSegmentDirection(seg.line, seg.stations[0], seg.stations[seg.stations.length - 1]);
+      // 구간 내 각 역의 혼잡도 계산 (캐시에서 직접)
+      const stationPcts = [];
+      for (const station of seg.stations) {
+        const lineNameMap = CONGESTION_NAME_BY_LINE[station];
+        const stationKey = lineNameMap?.[seg.line] || station;
+        const daySlots = getCachedSlots(stationKey, seg.line, dayType);
+        if (!daySlots) continue;
+        // 방향 결정
+        const dirs = direction ? [direction] : Object.keys(daySlots);
+        for (const dir of dirs) {
+          const slots = daySlots[dir];
+          if (!slots) continue;
+          const trend = analyzeTrend(slots, baseMin);
+          const pct = trend ? trend.now : 0;
+          stationPcts.push({ station, dir, pct, slots });
+        }
+      }
+      if (!stationPcts.length) return { ...seg, direction, stationPcts: [] };
+      return { ...seg, direction, stationPcts };
+    });
+
+    // 렌더링
+    let html = `<div class="route-result">`;
+    html += `<div style="font-size:13px;color:#6b7280;margin-bottom:12px">
+      <strong style="color:#1a1a1a">${normFrom.endsWith('역') || normFrom.includes('(') ? normFrom : normFrom + '역'}</strong> → <strong style="color:#1a1a1a">${normTo.endsWith('역') || normTo.includes('(') ? normTo : normTo + '역'}</strong>
+      &nbsp;·&nbsp; 환승 ${segments.length - 1}회 &nbsp;·&nbsp; ${path.length - 1}개 역
+    </div>`;
+
+    for (let si = 0; si < segmentData.length; si++) {
+      const seg = segmentData[si];
+      const color = LINE_COLOR_MAP[seg.line] || '#6b7280';
+      const badge = LINE_BADGE_MAP[seg.line] || seg.line;
+      const from_ = seg.stations[0];
+      const to_   = seg.stations[seg.stations.length - 1];
+      const stopCount = seg.stations.length - 1;
+
+      // 혼잡도 정보 (구간 전체 평균 + 최대 혼잡 연속 구간)
+      let congestionHtml = '';
+      if (seg.stationPcts.length) {
+        const pcts = seg.stationPcts.map(s => s.pct);
+        const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+        const avgColor = avg < 50 ? '#22c55e' : avg < 80 ? '#f59e0b' : '#ef4444';
+
+        // 최대 혼잡 연속 구간 탐색: 슬라이딩 윈도우로 평균이 가장 높은 2~3개 역 묶음
+        const sp = seg.stationPcts;
+        let bestStart = 0, bestEnd = 0, bestAvg = 0;
+        const winSize = Math.min(3, sp.length);
+        for (let i = 0; i <= sp.length - winSize; i++) {
+          const winAvg = sp.slice(i, i + winSize).reduce((a, b) => a + b.pct, 0) / winSize;
+          if (winAvg > bestAvg) { bestAvg = winAvg; bestStart = i; bestEnd = i + winSize - 1; }
+        }
+        const peakFrom = sp[bestStart].station;
+        const peakTo   = sp[bestEnd].station;
+        const peakLabel = peakFrom === peakTo ? `${peakFrom}역 부근` : `${peakFrom} - ${peakTo}`;
+        const maxColor = bestAvg < 50 ? '#22c55e' : bestAvg < 80 ? '#f59e0b' : '#ef4444';
+        const peakTrend = analyzeTrend(sp[bestStart]?.slots, baseMin);
+        const trendStr = peakTrend ? (peakTrend.trend30 >= 10 ? ' ↑' : peakTrend.trend30 <= -10 ? ' ↓' : '') : '';
+
+        // 출발역 승하차 맥락
+        const depStation = seg.stations[0];
+        const depBoarding = getBoardingContext(depStation, seg.line, bh);
+        const depBoardingHtml = depBoarding
+          ? `<div style="font-size:11px;color:#6b7280;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0">👥 ${depStation}: ${depBoarding.text}</div>`
+          : '';
+
+        congestionHtml = `
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <div style="flex:1">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">구간 평균</div>
+              <div style="font-size:18px;font-weight:700;color:${avgColor}">${Math.round(avg)}%</div>
+              <div style="height:5px;background:#f0f0f0;border-radius:3px;margin-top:4px">
+                <div style="height:100%;width:${Math.min(avg/1.3,100)}%;background:${avgColor};border-radius:3px"></div>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">최대 혼잡 구간</div>
+              <div style="font-size:18px;font-weight:700;color:${maxColor}">${Math.round(bestAvg)}%${trendStr}</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px">${peakLabel}</div>
+            </div>
+          </div>
+          ${depBoardingHtml}`;
+      } else {
+        congestionHtml = `<div style="font-size:11px;color:#9ca3af;margin-top:6px">혼잡도 정보 없음</div>`;
+      }
+
+      html += `
+        <div class="route-segment">
+          <div class="route-segment-header">
+            <span style="background:${color};color:white;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${badge}</span>
+            <span>${seg.line}</span>
+            <span style="color:#6b7280;font-weight:400;font-size:13px">${from_} → ${to_} (${stopCount}개 역)</span>
+          </div>
+          ${congestionHtml}
+        </div>`;
+
+      if (si < segmentData.length - 1) {
+        const nextSeg = segmentData[si + 1];
+        html += `<div class="route-arrow">⬇ <span style="font-size:12px;color:#6b7280">${to_}역 환승 → ${nextSeg.line}</span></div>`;
+      }
+    }
+    html += `</div>`;
+    content.innerHTML = html;
+
+  }
+
+  function swapRoute() {
+    const f = document.getElementById('routeFrom');
+    const t = document.getElementById('routeTo');
+    [f.value, t.value] = [t.value, f.value];
+  }
+
+  // 경로 탐색 자동완성
+  function setupRouteAC(inputId, listId) {
+    const input = document.getElementById(inputId);
+    const list  = document.getElementById(listId);
+    let idx = -1;
+    let suppressOpen = false;
+    input.addEventListener('input', async () => {
+      const q = input.value.trim();
+      idx = -1;
+      suppressOpen = false;
+      if (!q) { list.style.display = 'none'; return; }
+      const res = await fetch(`${API_BASE}/api/stations?q=${encodeURIComponent(q)}`);
+      const names = await res.json();
+      // 2~8호선에 있는 역만 필터
+      const filtered = names.filter(n => SUBWAY_GRAPH[n]).slice(0, 10);
+      if (!filtered.length) { list.style.display = 'none'; return; }
+      if (suppressOpen) return;
+      list.innerHTML = filtered.map(n =>
+        `<div class="autocomplete-item" onmousedown="selectRouteStation('${inputId}','${listId}','${n}')">${n}</div>`
+      ).join('');
+      list.style.display = 'block';
+    });
+    input.addEventListener('keydown', e => {
+      const items = list.querySelectorAll('.autocomplete-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx+1, items.length-1); items.forEach((el,i) => el.classList.toggle('active', i===idx)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx-1, -1); items.forEach((el,i) => el.classList.toggle('active', i===idx)); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        suppressOpen = true;
+        const val = input.value.trim().replace(/역$/, '');
+        const exact = [...items].find(el => el.textContent.replace(/역$/, '') === val);
+        if (idx >= 0 && items[idx]) selectRouteStation(inputId, listId, items[idx].textContent);
+        else if (items.length === 1) selectRouteStation(inputId, listId, items[0].textContent);
+        else if (exact) selectRouteStation(inputId, listId, exact.textContent);
+        else { list.style.display = 'none'; if (inputId === 'routeTo') searchRoute(); }
+      } else if (e.key === 'Escape') { suppressOpen = true; list.style.display = 'none'; }
+    });
+  }
+  function selectRouteStation(inputId, listId, name) {
+    document.getElementById(inputId).value = name;
+    document.getElementById(listId).style.display = 'none';
+    if (inputId === 'routeTo') searchRoute();
+  }
+  setupRouteAC('routeFrom', 'routeFromList');
+  setupRouteAC('routeTo', 'routeToList');
+</script>
+
+<footer style="margin-top:32px;padding:20px 16px 32px;background:var(--bg3);border-top:1px solid var(--border2);color:var(--text3);font-size:12px;line-height:1.7">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="font-weight:700;color:var(--text2);margin-bottom:10px">혼잡도 기준</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;margin-bottom:16px">
+      <div style="background:var(--card-bg);border-radius:8px;padding:8px 12px;border-left:3px solid #22c55e">
+        <div style="font-weight:700;color:#15803d">여유 &nbsp;<span style="font-weight:400">~40%</span></div>
+        <div style="margin-top:2px;color:var(--text3)">착석 가능, 이동 편함</div>
+      </div>
+      <div style="background:var(--card-bg);border-radius:8px;padding:8px 12px;border-left:3px solid #f59e0b">
+        <div style="font-weight:700;color:#b45309">보통 &nbsp;<span style="font-weight:400">40~70%</span></div>
+        <div style="margin-top:2px;color:var(--text3)">입석 일부, 이동 가능</div>
+      </div>
+      <div style="background:var(--card-bg);border-radius:8px;padding:8px 12px;border-left:3px solid #ef4444">
+        <div style="font-weight:700;color:#b91c1c">혼잡 &nbsp;<span style="font-weight:400">70~90%</span></div>
+        <div style="margin-top:2px;color:var(--text3)">입석 많음, 몸이 붙는 수준</div>
+      </div>
+      <div style="background:var(--card-bg);border-radius:8px;padding:8px 12px;border-left:3px solid #7c3aed">
+        <div style="font-weight:700;color:#6d28d9">매우 혼잡 &nbsp;<span style="font-weight:400">90%+</span></div>
+        <div style="margin-top:2px;color:var(--text3)">정원 근접, 이동·승차 어려움</div>
+      </div>
+    </div>
+    <div style="font-weight:700;color:var(--text2);margin-bottom:6px">혼잡도 데이터 안내</div>
+    <p>혼잡도 수치는 <strong style="color:var(--text2)">서울교통공사</strong>가 제공하는 <strong style="color:var(--text2)">시간대별 평균 혼잡도 통계</strong>(출처: 서울 열린데이터광장, subwConfusion)를 기반으로 합니다. 이 데이터는 과거 운행 실적에서 요일 유형(평일·토요일·일요일)과 30분 단위 시간대별로 집계된 <strong style="color:var(--text2)">통계치</strong>로, 실시간 혼잡도가 아닙니다. 데이터셋 최종 갱신일: <strong style="color:var(--text2)">2026년 3월 4일</strong> (서울 열린데이터광장 기준).</p>
+    <p style="margin-top:8px">열차 도착까지 남은 시간(초 단위)이 API에서 제공되면, <strong style="color:var(--text2)">도착 예정 시각 = 현재 시각 + 남은 시간</strong>을 계산하고, 해당 시각의 앞·뒤 30분 슬롯 혼잡도 사이를 <strong style="color:var(--text2)">선형 보간(Linear Interpolation)</strong>하여 예측합니다.</p>
+    <p style="margin-top:8px;color:var(--text4)">예) 현재 14:10, 열차 도착까지 8분 → 14:18 혼잡도 예측<br>14:00 슬롯(50%)과 14:30 슬롯(80%) 사이를 비율(18/30 = 60%)로 보간 → <strong>68%</strong></p>
+    <p style="margin-top:8px;color:var(--text4)">⚠️ 혼잡도는 <strong>상행/하행 방향 단위</strong>로만 집계됩니다. 1호선(신창행·서동탄행·인천행 등)이나 4호선(사당행·오이도행 등)처럼 같은 방향이라도 출발지·행선지에 따라 실제 혼잡도가 다를 수 있으나, 공개 데이터에 행선지별 구분이 없어 반영되지 않습니다.</p>
+  </div>
+</footer>
+</body>
+</html>
